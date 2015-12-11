@@ -24,6 +24,10 @@ struct byte_buffer {
 
 void free_byte_buffer(struct byte_buffer);
 
+/* For any of the below [*_or_error] structs, [error] is the valid union member
+   if, and only if, [valid] is false. If [valid] is true, the other union member
+   is valid. */
+
 struct handle_or_error {
   bool valid;
   union {
@@ -37,6 +41,8 @@ void free_handle_or_error(struct handle_or_error);
 struct possible_error {
   bool valid;
   union {
+    /* Unused, but maintains consistency with the rest of the [*_or_error]
+       structs. */
     uint8_t              unused;
     struct rocksdb_error error;
   };

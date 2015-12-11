@@ -97,9 +97,6 @@ struct RocksdbServer : public RocksDB::Server {
     return kj::READY_NOW;
   }
 
-  void unmap_except_rev_map(uint64_t id, std::vector<uint64_t>* ids_to_remove_later) {
-  }
-
   void unmap(uint64_t id) {
     auto rev_name_iter = rev_handle_map.find(id);
     handle_map.erase(handle_map.find(rev_name_iter->second));

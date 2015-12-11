@@ -98,16 +98,13 @@ struct RocksdbServer : public RocksDB::Server {
   }
 
   void unmap_except_rev_map(uint64_t id, std::vector<uint64_t>* ids_to_remove_later) {
-    if(ids_to_remove_later != nullptr)
-      ids_to_remove_later->push_back(id);
-
-    handle_map.erase(handle_map.find(rev_handle_map.find(id)->second));
-    connections.erase(connections.find(id));
   }
 
   void unmap(uint64_t id) {
-    unmap_except_rev_map(id, nullptr);
-    rev_handle_map.erase(rev_handle_map.find(id));
+    auto rev_name_iter = rev_handle_map.find(id);
+    handle_map.erase(handle_map.find(rev_name_iter->second));
+    connections.erase(connections.find(id));
+    rev_handle_map.erase(rev_name_iter);
   }
 
   virtual kj::Promise<void> close(CloseContext context) {

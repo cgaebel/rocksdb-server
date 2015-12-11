@@ -33,6 +33,13 @@ static uint8_t* bdup(const uint8_t* to_copy, size_t len) {
   return p;
 }
 
+static struct rocksdb_error wtf_error() {
+  assert(false);
+  struct rocksdb_error ret;
+  ret.message = strdup("Unknown, uncaught exception. Also, you have asserts disabled.");
+  return ret;
+}
+
 struct rocksdb_client {
   capnp::EzRpcClient client;
   RocksDB::Client    capability;
@@ -71,9 +78,9 @@ struct handle_or_error rocksdb_client_open(
     error.error = error_of_exception(e);
     return error;
   } catch(...) {
-    assert(false);
-    // clang is dumb. I need this to avoid a warning.
     struct handle_or_error error;
+    error.valid = false;
+    error.error = wtf_error();
     return error;
   }
 }
@@ -103,9 +110,9 @@ struct bytes_or_error rocksdb_client_get(
     error.error = error_of_exception(e);
     return error;
   } catch(...) {
-    assert(false);
-    // clang is dumb. I need this to avoid a warning.
-    struct bytes_or_error error;
+    struct handle_or_error error;
+    error.valid = false;
+    error.error = wtf_error();
     return error;
   }
 }
@@ -133,9 +140,9 @@ struct possible_error rocksdb_client_put(
     error.error = error_of_exception(e);
     return error;
   } catch(...) {
-    assert(false);
-    // clang is dumb. I need this to avoid a warning.
     struct possible_error error;
+    error.valid = false;
+    error.error = wtf_error();
     return error;
   }
 }

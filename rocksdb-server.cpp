@@ -19,11 +19,8 @@
 struct DB {
   std::unique_ptr<rocksdb::DB> db;
   uint64_t                     refcount;
-  time_t                       last_referenced;
 
-  DB()
-    : db(), refcount(1), last_referenced(time(NULL))
-  {}
+  DB() : db(), refcount(1) {}
 
   rocksdb::Status init(const std::string& file) {
     rocksdb::Options options;
@@ -32,10 +29,6 @@ struct DB {
     rocksdb::Status status = rocksdb::DB::Open(options, file, &ptr);
     db = std::unique_ptr<rocksdb::DB>(ptr);
     return status;
-  }
-
-  void poke() {
-    last_referenced = time(NULL);
   }
 };
 
@@ -92,7 +85,6 @@ struct RocksdbServer : public RocksDB::Server {
       // Already connected.
       uint64_t id = id_handle->second;
       DB& connection = connections[id];
-      connection.poke();
       connection.refcount++;
       context.getResults().setHandle(id);
     }
@@ -156,7 +148,6 @@ struct RocksdbServer : public RocksDB::Server {
 
     std::string value;
 
-    db->poke();
     rocksdb::Status s = db->db->Get(rocksdb::ReadOptions(), key, &value);
     KJ_REQUIRE(s.ok(), "RocksDB Error", s.ToString());
 
@@ -173,7 +164,6 @@ struct RocksdbServer : public RocksDB::Server {
 
     DB* db = db_of(id);
 
-    db->poke();
     rocksdb::Status s = db->db->Put(rocksdb::WriteOptions(), key, value);
     KJ_REQUIRE(s.ok(), "RocksDB Error", s.ToString());
 
@@ -182,34 +172,6 @@ struct RocksdbServer : public RocksDB::Server {
 
   virtual ~RocksdbServer() {}
 };
-
-kj::Promise<void> gc_unused_connections(capnp::EzRpcServer* context, RocksdbServer* server) {
-  auto interval = 10 * kj::MINUTES;
-  time_t now = time(NULL);
-
-  server->invariant();
-
-  std::vector<uint64_t> remove_from_rev_map;
-
-  for(auto& kv : server->rev_handle_map) {
-    uint64_t id = kv.first;
-    if(difftime(now, server->connections[id].last_referenced) >= (interval / kj::SECONDS)) {
-      server->unmap_except_rev_map(id, &remove_from_rev_map);
-    }
-  }
-
-  // A bit of shenanigans to prevent invalidating the iterator in the preceding loop.
-  for(auto& v : remove_from_rev_map)
-    server->rev_handle_map.erase(server->rev_handle_map.find(v));
-
-  server->invariant();
-
-  // TODO(cgaebel): Ensure this won't stack overflow.
-  return context->getIoProvider().getTimer().afterDelay(interval)
-    .then([context, server]() {
-        gc_unused_connections(context, server);
-    });
-}
 
 int main(int argc, char* argv[]) {
   if (argc != 2) {
@@ -225,11 +187,7 @@ int main(int argc, char* argv[]) {
     return 1;
   }
 
-  kj::Own<RocksdbServer> rocksdb_server = kj::heap<RocksdbServer>();
-
-  RocksdbServer* rocksdb_server_ptr = rocksdb_server.get();
-
-  capnp::EzRpcServer server(std::move(rocksdb_server), argv[1]);
+  capnp::EzRpcServer server(kj::heap<RocksdbServer>(), argv[1]);
 
   auto& wait_scope = server.getWaitScope();
 
@@ -238,8 +196,6 @@ int main(int argc, char* argv[]) {
     std::cout << "Listening on unix socket [" << argv[1] << "]..." << std::endl;
   else
     std::cout << "Listening on port " << port << "..." << std::endl;
-
-  gc_unused_connections(&server, rocksdb_server_ptr);
 
   kj::NEVER_DONE.wait(wait_scope);
 }

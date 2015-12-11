@@ -127,9 +127,7 @@ struct RocksdbServer : public RocksDB::Server {
   }
 
   static rocksdb::Slice slice_of_kj(kj::ArrayPtr<const uint8_t> kj) {
-    return rocksdb::Slice(
-      (const char*)kj.begin(),
-      kj.size());
+    return rocksdb::Slice((const char*)kj.begin(), kj.size());
   }
 
   static kj::ArrayPtr<const uint8_t> kj_of_string(const std::string& s) {

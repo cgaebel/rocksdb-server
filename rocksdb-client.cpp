@@ -43,14 +43,16 @@ struct rocksdb_client {
   {}
 };
 
-struct rocksdb_client* rocksdb_client_malloc(const char* host, uint16_t port) {
+struct rocksdb_client* rocksdb_client_malloc(
+    const char* host, uint16_t port) {
   return new rocksdb_client(host, port);
 }
 
 /* Absolutely do not forget to call [*_free] on the values returned by the
    functions below. Leaking memory is no fun. */
 
-struct handle_or_error rocksdb_client_open(rocksdb_client* c, const char* path) {
+struct handle_or_error rocksdb_client_open(
+    rocksdb_client* c, const char* path) {
   try {
     auto& wait_scope = c->client.getWaitScope();
     auto request = c->capability.openRequest();
@@ -77,7 +79,8 @@ struct handle_or_error rocksdb_client_open(rocksdb_client* c, const char* path) 
 }
 
 struct bytes_or_error rocksdb_client_get(
-  struct rocksdb_client* c, uint64_t handle, const uint8_t* key, size_t keylen) {
+    struct rocksdb_client* c, uint64_t handle,
+    const uint8_t* key, size_t keylen) {
   try {
     auto& wait_scope = c->client.getWaitScope();
     auto request = c->capability.getRequest();
@@ -108,8 +111,9 @@ struct bytes_or_error rocksdb_client_get(
 }
 
 struct possible_error rocksdb_client_put(
-  struct rocksdb_client* c, uint64_t handle, const uint8_t* key, size_t keylen,
-                                             const uint8_t* val, size_t vallen) {
+    struct rocksdb_client* c, uint64_t handle,
+    const uint8_t* key, size_t keylen,
+    const uint8_t* val, size_t vallen) {
   try {
     auto& wait_scope = c->client.getWaitScope();
     auto request = c->capability.putRequest();

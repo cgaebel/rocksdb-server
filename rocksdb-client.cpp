@@ -110,7 +110,7 @@ struct bytes_or_error rocksdb_client_get(
     error.error = error_of_exception(e);
     return error;
   } catch(...) {
-    struct handle_or_error error;
+    struct bytes_or_error error;
     error.valid = false;
     error.error = wtf_error();
     return error;

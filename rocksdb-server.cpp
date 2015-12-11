@@ -30,6 +30,10 @@ struct DB {
     db = std::unique_ptr<rocksdb::DB>(ptr);
     return status;
   }
+
+  void invariant() {
+    KJ_REQUIRE(refcount > 0);
+  }
 };
 
 struct RocksdbServer : public RocksDB::Server {
@@ -58,6 +62,7 @@ struct RocksdbServer : public RocksDB::Server {
                  "there can be no reallocation of handles");
       KJ_REQUIRE(rev_handle_map.find(x.first) != rev_handle_map.end(),
                  "connections must all be in handle_map");
+      x.second.invariant();
     }
   }
 

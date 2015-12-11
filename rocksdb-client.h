@@ -65,17 +65,20 @@ struct rocksdb_client;
 /* Absolutely do not forget to call [*_free] on the values returned by the
    functions below. Leaking memory is no fun. */
 
-struct rocksdb_client* rocksdb_client_malloc(const char* host, uint16_t port);
+struct rocksdb_client* rocksdb_client_malloc(
+  const char* host, uint16_t port);
 
 struct handle_or_error rocksdb_client_open(
   struct rocksdb_client*, const char* database_path);
 
-struct bytes_or_error  rocksdb_client_get(
-  struct rocksdb_client*, uint64_t handle, const uint8_t* key, size_t keylen);
+struct bytes_or_error rocksdb_client_get(
+  struct rocksdb_client*, uint64_t handle,
+  const uint8_t* key, size_t keylen);
 
-struct possible_error  rocksdb_client_put(
-  struct rocksdb_client*, uint64_t handle, const uint8_t* key, size_t keylen,
-                                           const uint8_t* val, size_t vallen);
+struct possible_error rocksdb_client_put(
+  struct rocksdb_client*, uint64_t handle,
+  const uint8_t* key, size_t keylen,
+  const uint8_t* val, size_t vallen);
 
 void rocksdb_client_free(struct rocksdb_client*);
 

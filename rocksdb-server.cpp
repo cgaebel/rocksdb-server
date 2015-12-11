@@ -225,14 +225,21 @@ int main(int argc, char* argv[]) {
     return 1;
   }
 
-  capnp::EzRpcServer server(kj::heap<RocksdbServer>(), argv[1]);
+  kj::Own<RocksdbServer> rocksdb_server = kj::heap<RocksdbServer>();
+
+  RocksdbServer* rocksdb_server_ptr = rocksdb_server.get();
+
+  capnp::EzRpcServer server(std::move(rocksdb_server), argv[1]);
 
   auto& wait_scope = server.getWaitScope();
+
   uint port = server.getPort().wait(wait_scope);
   if(port == 0)
     std::cout << "Listening on unix socket [" << argv[1] << "]..." << std::endl;
   else
     std::cout << "Listening on port " << port << "..." << std::endl;
+
+  gc_unused_connections(&server, rocksdb_server_ptr);
 
   kj::NEVER_DONE.wait(wait_scope);
 }

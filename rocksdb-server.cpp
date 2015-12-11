@@ -4,18 +4,17 @@
 #include <iostream>
 #include <memory>
 #include <unordered_map>
+#include <vector>
 
+#include <kj/async-io.h>
 #include <kj/debug.h>
+#include <kj/time.h>
 #include <capnp/ez-rpc.h>
 #include <capnp/message.h>
 
 #include <rocksdb/db.h>
 
 #include "rocksdb.capnp.h"
-
-// Enable invariant checking. Uncomment for speed, but only if you REALLY
-// need to. You probably don't.
-#define BE_CAREFUL
 
 struct DB {
   std::unique_ptr<rocksdb::DB> db;
@@ -103,6 +102,19 @@ struct RocksdbServer : public RocksDB::Server {
     return kj::READY_NOW;
   }
 
+  void unmap_except_rev_map(uint64_t id, std::vector<uint64_t>* ids_to_remove_later) {
+    if(ids_to_remove_later != nullptr)
+      ids_to_remove_later->push_back(id);
+
+    handle_map.erase(handle_map.find(rev_handle_map.find(id)->second));
+    connections.erase(connections.find(id));
+  }
+
+  void unmap(uint64_t id) {
+    unmap_except_rev_map(id, nullptr);
+    rev_handle_map.erase(rev_handle_map.find(id));
+  }
+
   kj::Promise<void> close(CloseContext context) {
     invariant();
 
@@ -111,22 +123,18 @@ struct RocksdbServer : public RocksDB::Server {
     DB& connection = connections[id];
     connection.refcount--;
 
-    if(connection.refcount == 0) {
-      auto db_path = rev_handle_map.find(id);
-      handle_map.erase(handle_map.find(db_path->second));
-      rev_handle_map.erase(db_path);
-      connections.erase(connections.find(id));
-    }
+    if(connection.refcount == 0)
+      unmap(id);
 
     invariant();
 
     return kj::READY_NOW;
   }
 
-  rocksdb::DB* db_of(uint64_t id) {
+  DB* db_of(uint64_t id) {
     auto iter = connections.find(id);
     KJ_REQUIRE(iter != connections.end(), "Invalid connection id.", id);
-    return iter->second.db.get();
+    return &iter->second;
   }
 
   static rocksdb::Slice slice_of_kj(kj::ArrayPtr<const uint8_t> kj) {
@@ -144,11 +152,12 @@ struct RocksdbServer : public RocksDB::Server {
     uint64_t id = params.getHandle();
     auto key    = slice_of_kj(params.getKey());
 
-    rocksdb::DB* db = db_of(id);
+    DB* db = db_of(id);
 
     std::string value;
 
-    rocksdb::Status s = db->Get(rocksdb::ReadOptions(), key, &value);
+    db->poke();
+    rocksdb::Status s = db->db->Get(rocksdb::ReadOptions(), key, &value);
     KJ_REQUIRE(s.ok(), "RocksDB Error", s.ToString());
 
     context.getResults().setValue(kj_of_string(value));
@@ -162,9 +171,10 @@ struct RocksdbServer : public RocksDB::Server {
     auto key    = slice_of_kj(params.getKey());
     auto value  = slice_of_kj(params.getValue());
 
-    rocksdb::DB* db = db_of(id);
+    DB* db = db_of(id);
 
-    rocksdb::Status s = db->Put(rocksdb::WriteOptions(), key, value);
+    db->poke();
+    rocksdb::Status s = db->db->Put(rocksdb::WriteOptions(), key, value);
     KJ_REQUIRE(s.ok(), "RocksDB Error", s.ToString());
 
     return kj::READY_NOW;
@@ -172,6 +182,34 @@ struct RocksdbServer : public RocksDB::Server {
 
   virtual ~RocksdbServer() {}
 };
+
+kj::Promise<void> gc_unused_connections(capnp::EzRpcServer* context, RocksdbServer* server) {
+  auto interval = 10 * kj::MINUTES;
+  time_t now = time(NULL);
+
+  server->invariant();
+
+  std::vector<uint64_t> remove_from_rev_map;
+
+  for(auto& kv : server->rev_handle_map) {
+    uint64_t id = kv.first;
+    if(difftime(now, server->connections[id].last_referenced) >= (interval / kj::SECONDS)) {
+      server->unmap_except_rev_map(id, &remove_from_rev_map);
+    }
+  }
+
+  // A bit of shenanigans to prevent invalidating the iterator in the preceding loop.
+  for(auto& v : remove_from_rev_map)
+    server->rev_handle_map.erase(server->rev_handle_map.find(v));
+
+  server->invariant();
+
+  // TODO(cgaebel): Ensure this won't stack overflow.
+  return context->getIoProvider().getTimer().afterDelay(interval)
+    .then([context, server]() {
+        gc_unused_connections(context, server);
+    });
+}
 
 int main(int argc, char* argv[]) {
   if (argc != 2) {

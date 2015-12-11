@@ -42,9 +42,7 @@ struct RocksdbServer : public RocksDB::Server {
   std::unordered_map<uint64_t, DB>          connections;
   uint64_t                                  next_handle_to_allocate;
 
-  RocksdbServer()
-    : connections(), next_handle_to_allocate(0)
-  {}
+  RocksdbServer() : connections(), next_handle_to_allocate(0) {}
 
   void invariant() {
     for(auto& x : handle_map) {
@@ -66,7 +64,7 @@ struct RocksdbServer : public RocksDB::Server {
     }
   }
 
-  kj::Promise<void> open(OpenContext context) {
+  virtual kj::Promise<void> open(OpenContext context) {
     invariant();
 
     auto filename = context.getParams().getPath();
@@ -112,7 +110,7 @@ struct RocksdbServer : public RocksDB::Server {
     rev_handle_map.erase(rev_handle_map.find(id));
   }
 
-  kj::Promise<void> close(CloseContext context) {
+  virtual kj::Promise<void> close(CloseContext context) {
     invariant();
 
     uint64_t id = context.getParams().getHandle();
@@ -144,7 +142,7 @@ struct RocksdbServer : public RocksDB::Server {
     return kj::ArrayPtr<const uint8_t>((const uint8_t*)s.c_str(), s.size());
   }
 
-  kj::Promise<void> get(GetContext context) {
+  virtual kj::Promise<void> get(GetContext context) {
     auto params = context.getParams();
     uint64_t id = params.getHandle();
     auto key    = slice_of_kj(params.getKey());
@@ -161,7 +159,7 @@ struct RocksdbServer : public RocksDB::Server {
     return kj::READY_NOW;
   }
 
-  kj::Promise<void> put(PutContext context) {
+  virtual kj::Promise<void> put(PutContext context) {
     auto params = context.getParams();
     uint64_t id = params.getHandle();
     auto key    = slice_of_kj(params.getKey());

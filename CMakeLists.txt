@@ -35,13 +35,9 @@ capnp_generate_cpp(CAPNP_SRCS CAPNP_HDRS rocksdb.capnp)
 add_library(rocksdb-capnp
   ${CAPNP_SRCS} ${CAPNP_HDRS})
 target_link_libraries(rocksdb-capnp ${CAPNP_LIBRARIES})
+
 target_link_libraries(rocksdb-server rocksdb-capnp)
 target_link_libraries(rocksdb-client rocksdb-capnp)
-
-# need this for C++11
-set_property(TARGET rocksdb-capnp  PROPERTY CXX_STANDARD 11)
-set_property(TARGET rocksdb-server PROPERTY CXX_STANDARD 11)
-set_property(TARGET rocksdb-client PROPERTY CXX_STANDARD 11)
 
 # rocksdb
 

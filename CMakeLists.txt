@@ -16,7 +16,8 @@ add_executable(rocksdb-server
 
 # rocksdb-client
 add_library(rocksdb-client
-    rocksdb-client.cpp)
+  rocksdb-client.h
+  rocksdb-client.cpp)
 
 ###############################################################################
 ## Dependencies ###############################################################

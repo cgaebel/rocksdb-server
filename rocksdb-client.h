@@ -80,6 +80,10 @@ struct possible_error rocksdb_client_put(
   const uint8_t* key, size_t keylen,
   const uint8_t* val, size_t vallen);
 
+/* TODO(cgaebel): Multiget is supported on the server. I don't know what API you
+   want for the client. If you figure that out, the client binding is really
+   easy to write. */
+
 void rocksdb_client_free(struct rocksdb_client*);
 
 #ifdef __cplusplus

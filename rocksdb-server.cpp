@@ -134,6 +134,19 @@ struct RocksdbServer : public RocksDB::Server {
     return kj::ArrayPtr<const uint8_t>((const uint8_t*)s.c_str(), s.size());
   }
 
+  static std::vector<rocksdb::Slice> slices_of_kjs(const capnp::List<capnp::Data>::Reader& kjs) {
+    std::vector<rocksdb::Slice> ret(kjs.size());
+    for(size_t i = 0; i < kjs.size(); ++i)
+      ret.push_back(slice_of_kj(kjs[i]));
+    return ret;
+  }
+
+  static void kjs_of_strings(const std::vector<std::string>& v, capnp::List<capnp::Data>::Builder& dest) {
+    KJ_REQUIRE(v.size() == dest.size(), v.size(), dest.size());
+    for(size_t i = 0; i < v.size(); ++i)
+      dest[i] = capnp::Data::Builder((uint8_t*)v[i].c_str(), v[i].size());
+  }
+
   virtual kj::Promise<void> get(GetContext context) {
     auto params = context.getParams();
     uint64_t id = params.getHandle();
@@ -161,6 +174,26 @@ struct RocksdbServer : public RocksDB::Server {
 
     rocksdb::Status s = db->db->Put(rocksdb::WriteOptions(), key, value);
     KJ_REQUIRE(s.ok(), "RocksDB Error", s.ToString());
+
+    return kj::READY_NOW;
+  }
+
+  virtual kj::Promise<void> multiget(MultigetContext context) {
+    auto params = context.getParams();
+    uint64_t id = params.getHandle();
+
+    std::vector<rocksdb::Slice> keys = slices_of_kjs(params.getKeys());
+
+    DB* db = db_of(id);
+
+    std::vector<std::string> values(keys.size());
+
+    std::vector<rocksdb::Status> s = db->db->MultiGet(rocksdb::ReadOptions(), keys, &values);
+    for(size_t i = 0; i < s.size(); ++i)
+      KJ_REQUIRE(s[i].ok(), "RocksDB Error", s[i].ToString(), params.getKeys()[i]);
+
+    auto results = context.getResults().initValues(values.size());
+    kjs_of_strings(values, results);
 
     return kj::READY_NOW;
   }

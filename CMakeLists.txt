@@ -54,12 +54,15 @@ target_link_libraries(rocksdb-server ${ROCKSDB_LIBRARIES})
 
 # pthread
 
-find_package(Threads REQUIRED)
-if(THREADS_HAVE_PTHREAD_ARG)
-  target_compile_options(PUBLIC rocksdb-server "-pthread")
-endif()
-if(CMAKE_THREAD_LIBS_INIT)
-  target_link_libraries(rocksdb-server "${CMAKE_THREAD_LIBS_INIT}")
+find_package(Threads)
+
+if(THREADS_FOUND)
+  if(THREADS_HAVE_PTHREAD_ARG)
+    target_compile_options(PUBLIC rocksdb-server "-pthread")
+  endif()
+  if(CMAKE_THREAD_LIBS_INIT)
+    target_link_libraries(rocksdb-server "${CMAKE_THREAD_LIBS_INIT}")
+  endif()
 endif()
 
 # bz2

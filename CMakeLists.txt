@@ -45,7 +45,6 @@ find_package(rocksdb REQUIRED)
 include_directories(${ROCKSDB_INCLUDE_DIR})
 target_link_libraries(rocksdb-server ${ROCKSDB_LIBRARIES})
 target_link_libraries(rocksdb-client ${ROCKSDB_LIBRARIES})
-target_link_libraries(rocksdb-server ${ROCKSDB_LIBRARIES})
 
 ## Dependencies of rocksdb
 

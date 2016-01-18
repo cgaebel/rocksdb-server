@@ -11,6 +11,8 @@ int main(void) {
 
   uint64_t handle = r.handle;
 
+  free_handle_or_error(r);
+
   const char* k = "hello";
   const char* v = "world";
 

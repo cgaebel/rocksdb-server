@@ -48,7 +48,7 @@ struct possible_error {
   };
 };
 
-void free_posible_error(struct possible_error);
+void free_possible_error(struct possible_error);
 
 struct bytes_or_error {
   bool valid;

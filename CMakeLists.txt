@@ -4,7 +4,7 @@ project(rocksdb-server)
 list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -std=gnu++11")
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Wextra -std=gnu++11")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Wextra -std=gnu11")
 
 ###############################################################################
 ## Target Definitions #########################################################
@@ -18,6 +18,9 @@ add_executable(rocksdb-server
 add_library(rocksdb-client
   rocksdb-client.h
   rocksdb-client.cpp)
+
+add_executable(client-demo
+  client-demo.c)
 
 ###############################################################################
 ## Dependencies ###############################################################
@@ -45,7 +48,8 @@ find_package(rocksdb REQUIRED)
 include_directories(${ROCKSDB_INCLUDE_DIR})
 target_link_libraries(rocksdb-server ${ROCKSDB_LIBRARIES})
 target_link_libraries(rocksdb-client ${ROCKSDB_LIBRARIES})
-target_link_libraries(rocksdb-server ${ROCKSDB_LIBRARIES})
+
+target_link_libraries(client-demo rocksdb-client)
 
 ## Dependencies of rocksdb
 

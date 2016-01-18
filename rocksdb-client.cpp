@@ -18,7 +18,7 @@ extern "C" {
 void free_rocksdb_error(struct rocksdb_error e) { free(e.message); }
 void free_byte_buffer(struct byte_buffer b) { free(b.buffer); }
 void free_handle_or_error(struct handle_or_error h) { if(!h.valid) free_rocksdb_error(h.error); }
-void free_posible_error(struct possible_error e) { if(!e.valid) free_rocksdb_error(e.error); }
+void free_possible_error(struct possible_error e) { if(!e.valid) free_rocksdb_error(e.error); }
 void free_bytes_or_error(struct bytes_or_error b) { if(b.valid) free_byte_buffer(b.bytes); else free_rocksdb_error(b.error); }
 
 static struct rocksdb_error error_of_exception(kj::Exception& e) {
